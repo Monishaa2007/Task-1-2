@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Movie Filter & Watchlist</title>
+    <style>
+        .filter-container { display: flex; margin-bottom: 20px; }
+        .genre-chips { display: flex; flex-wrap: wrap; }
+        .genre-chip { margin: 5px; padding: 5px 10px; border: 1px solid #ccc; cursor: pointer; }
+        .genre-chip.selected { background-color: #007bff; color: white; }
+        .rating-slider { width: 200px; margin: 5px; }
+        .year-dropdown { margin: 5px; }
+        .movie-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .movie-card { border: 1px solid #ddd; padding: 10px; }
+        .watchlist-button { cursor: pointer; }
+        .watchlist-container { margin-top: 20px; }
+        .watchlist-card { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px;}
+    </style>
+</head>
+<body>
+    <div class="filter-container">
+        <div class="genre-chips"></div>
+        <input type="range" class="rating-slider" min="0" max="10" value="0">
+        <select class="year-dropdown"></select>
+    </div>
+    <div class="movie-list"></div>
+    <div class="watchlist-container">
+        <h2>Watchlist</h2>
+        <div class="watchlist-items"></div>
+    </div>
+    <script>
+        try {
+            const genres = ['Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller'];
+            const years = Array.from({ length: 20 }, (_, i) => 2023 - i);
+            const movies = [
+                { id: 1, title: 'Movie 1', genre: 'Action', year: 2023, rating: 8 },
+                { id: 2, title: 'Movie 2', genre: 'Comedy', year: 2022, rating: 6 },
+                { id: 3, title: 'Movie 3', genre: 'Drama', year: 2021, rating: 9 },
+                { id: 4, title: 'Movie 4', genre: 'Sci-Fi', year: 2020, rating: 7 },
+                { id: 5, title: 'Movie 5', genre: 'Thriller', year: 2019, rating: 8 },
+                { id: 6, title: 'Movie 6', genre: 'Action', year: 2023, rating: 5 },
+                { id: 7, title: 'Movie 7', genre: 'Comedy', year: 2022, rating: 9 },
+                { id: 8, title: 'Movie 8', genre: 'Drama', year: 2021, rating: 6 },
+                { id: 9, title: 'Movie 9', genre: 'Sci-Fi', year: 2020, rating: 8 },
+                { id: 10, title: 'Movie 10', genre: 'Thriller', year: 2019, rating: 7 },
+            ];
+            let selectedGenres = [];
+            let selectedRating = 0;
+            let selectedYear = null;
+            let watchlist = JSON.parse(localStorage.getItem('watchlist')) || [];
+
+            function renderGenres() {
+                try {
+                    const genreChips = document.querySelector('.genre-chips');
+                    genreChips.innerHTML = '';
+                    genres.forEach(genre => {
+                        const chip = document.createElement('div');
+                        chip.classList.add('genre-chip');
+                        chip.textContent = genre;
+                        if (selectedGenres.includes(genre)) {
+                            chip.classList.add('selected');
+                        }
+                        chip.addEventListener('click', () => {
+                            if (selectedGenres.includes(genre)) {
+                                selectedGenres = selectedGenres.filter(g => g !== genre);
+                            } else {
+                                selectedGenres.push(genre);
+                            }
+                            renderGenres();
+                            filterMovies();
+                        });
+                        genreChips.appendChild(chip);
+                    });
+                } catch (error) { console.error("Error rendering genres:", error); }
+            }
+
+            function renderYears() {
+                try {
+                    const yearDropdown = document.querySelector('.year-dropdown');
+                    yearDropdown.innerHTML = '<option value="">All Years</option>';
+                    years.forEach(year => {
+                        const option = document.createElement('option');
+                        option.value = year;
+                        option.textContent = year;
+                        yearDropdown.appendChild(option);
+                    });
+                    yearDropdown.addEventListener('change', (e) => {
+                        selectedYear = e.target.value ? parseInt(e.target.value) : null;
+                        filterMovies();
+                    });
+                } catch (error) { console.error("Error rendering years:", error); }
+            }
+
+            function filterMovies() {
+                try {
+                    const filteredMovies = movies.filter(movie => {
+                        const genreMatch = selectedGenres.length === 0 || selectedGenres.includes(movie.genre);
+                        const ratingMatch = movie.rating >= selectedRating;
+                        const yearMatch = selectedYear === null || movie.year === selectedYear;
+                        return genreMatch && ratingMatch && yearMatch;
+                    });
+                    renderMovies(filteredMovies);
+                } catch (error) { console.error("Error filtering movies:", error); }
+            }
+
+            function renderMovies(movieList) {
+                try {
+                    const movieListDiv = document.querySelector('.movie-list');
+                    movieListDiv.innerHTML = '';
+                    movieList.forEach(movie => {
+                        const card = document.createElement('div');
+                        card.classList.add('movie-card');
+                        card.innerHTML = `
+                            <h3>${movie.title}</h3>
+                            <p>Genre: ${movie.genre}</p>
+                            <p>Year: ${movie.year}</p>
+                            <p>Rating: ${movie.rating}</p>
+                            <button class="watchlist-button" data-id="${movie.id}">${watchlist.some(item => item.id === movie.id) ? 'Remove from Watchlist' : 'Add to Watchlist'}</button>
+                        `;
+                        movieListDiv.appendChild(card);
+                    });
+                    document.querySelectorAll('.watchlist-button').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const id = parseInt(e.target.dataset.id);
+                            const movie = movies.find(m => m.id === id);
+                            if (watchlist.some(item => item.id === id)) {
+                                watchlist = watchlist.filter(item => item.id !== id);
+                                e.target.textContent = 'Add to Watchlist';
+                            } else {
+                                watchlist.push(movie);
+                                e.target.textContent = 'Remove from Watchlist';
+                            }
+                            localStorage.setItem('watchlist', JSON.stringify(watchlist));
+                            renderWatchlist();
+                        });
+                    });
+                } catch (error) { console.error("Error rendering movies:", error); }
+            }
+
+            function renderWatchlist() {
+                try {
+                    const watchlistItems = document.querySelector('.watchlist-items');
+                    watchlistItems.innerHTML = '';
+                    watchlist.forEach(movie => {
+                        const card = document.createElement('div');
+                        card.classList.add('watchlist-card');
+                        card.innerHTML = `
+                            <h3>${movie.title}</h3>
+                            <p>Genre: ${movie.genre}</p>
+                            <p>Year: ${movie.year}</p>
+                            <p>Rating: ${movie.rating}</p>
+                        `;
+                        watchlistItems.appendChild(card);
+                    });
+                } catch (error) { console.error("Error rendering watchlist:", error); }
+            }
+
+            document.querySelector('.rating-slider').addEventListener('input', (e) => {
+                try {
+                    selectedRating = parseInt(e.target.value);
+                    filterMovies();
+                } catch (error) { console.error("Error handling rating slider:", error); }
+            });
+            renderGenres();
+            renderYears();
+            filterMovies();
+            renderWatchlist();
+        } catch (globalError) {
+            console.error("Global script error:", globalError);
+        }
+    </script>
+</body>
+</html>
